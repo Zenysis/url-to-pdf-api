@@ -14,7 +14,7 @@ RUN apk update && apk upgrade && \
       ttf-freefont@edge
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
-ENV CHROME_BIN=/usr/bin/chromium-browser
+ENV BROWSER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 ENV NODE_ENV=production
 ENV PORT=9000

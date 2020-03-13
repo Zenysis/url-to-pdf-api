@@ -3,6 +3,24 @@ const _ = require('lodash');
 const config = require('../config');
 const logger = require('../util/logger')(__filename);
 
+
+async function createBrowser(opts) {
+  const browserOpts = {
+    ignoreHTTPSErrors: opts.ignoreHttpsErrors,
+    sloMo: config.DEBUG_MODE ? 250 : undefined,
+  };
+  if (config.BROWSER_WS_ENDPOINT) {
+    browserOpts.browserWSEndpoint = config.BROWSER_WS_ENDPOINT;
+    return puppeteer.connect(browserOpts);
+  }
+  if (config.BROWSER_EXECUTABLE_PATH) {
+    browserOpts.executablePath = config.BROWSER_EXECUTABLE_PATH;
+  }
+  browserOpts.headless = !config.DEBUG_MODE;
+  browserOpts.args = ['--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox'];
+  return puppeteer.launch(browserOpts);
+}
+
 async function render(_opts = {}) {
   const opts = _.merge({
     cookies: [],
@@ -37,13 +55,7 @@ async function render(_opts = {}) {
 
   logOpts(opts);
 
-  const browser = await puppeteer.launch({
-    headless: !config.DEBUG_MODE,
-    executablePath: process.env.CHROME_BIN,
-    ignoreHTTPSErrors: opts.ignoreHttpsErrors,
-    args: ['--disable-gpu', '--no-sandbox', '--disable-setuid-sandbox'],
-    sloMo: config.DEBUG_MODE ? 250 : undefined,
-  });
+  const browser = await createBrowser(opts);
   const page = await browser.newPage();
 
   page.on('console', (...args) => logger.info('PAGE LOG:', ...args));
@@ -140,6 +152,8 @@ async function render(_opts = {}) {
 
     if (opts.output === 'pdf') {
       data = await page.pdf(opts.pdf);
+    } else if (opts.output === 'html') {
+      data = await page.evaluate(() => document.body.innerHTML);
     } else {
       // This is done because puppeteer throws an error if fullPage and clip is used at the same
       // time even though clip is just empty object {}
